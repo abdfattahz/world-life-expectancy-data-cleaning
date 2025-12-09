@@ -1,8 +1,9 @@
 -- World Life Expectancy - Data Cleaning
 
 -- 1. Quick sanity check: view the raw table
-SELECT *
-FROM world_life_expectancy;
+SELECT COUNT(*)
+FROM world_life_expectancy
+;
 
 
 -- 2. Identify duplicate Country + Year rows
@@ -13,7 +14,8 @@ SELECT
     COUNT(*) AS row_count
 FROM world_life_expectancy
 GROUP BY Country, Year, CONCAT(Country, Year)
-HAVING COUNT(*) > 1;
+HAVING COUNT(*) > 1
+;
 
 
 -- 3. List duplicate rows using ROW_NUMBER
@@ -29,7 +31,8 @@ FROM (
         ) AS Row_Num
     FROM world_life_expectancy
 ) AS row_table
-WHERE Row_Num > 1;
+WHERE Row_Num > 1
+;
 
 
 -- 4. Delete duplicate rows (keep Row_Num = 1)
@@ -52,12 +55,14 @@ WHERE Row_ID IN (
 
 -- 5. Inspect Status values and blanks
 SELECT *
-FROM world_life_expectancy;
--- WHERE Status = '';   -- uncomment to view only blank Status rows
+FROM world_life_expectancy
+WHERE Status = '' 
+;
 
 SELECT DISTINCT Status
 FROM world_life_expectancy
-WHERE Status <> '';
+WHERE Status <> ''
+;
 
 SELECT DISTINCT(Country)
 FROM world_life_expectancy
@@ -84,7 +89,25 @@ JOIN world_life_expectancy AS t2
     ON t1.Country = t2.Country
 SET t1.Status = 'Developing'
 WHERE t1.Status = ''
-  AND t2.Status = 'Developing';
+AND t2.Status <> ''
+AND t2.Status = 'Developing'
+;
+
+-- checking the USA status since we found out there's 1 left that is still NULL
+SELECT Country, Status
+FROM world_life_expectancy
+WHERE Country = 'United States of America'
+;
+
+-- applying the same thing for country with 'Developed' status
+UPDATE world_life_expectancy AS t1
+JOIN world_life_expectancy AS t2
+    ON t1.Country = t2.Country
+SET t1.Status = 'Developed'
+WHERE t1.Status = ''
+AND t2.Status <> ''
+AND t2.Status = 'Developed'
+;
 
 
 -- 7. (Optional) Check the join result
@@ -92,3 +115,38 @@ WHERE t1.Status = ''
 -- FROM world_life_expectancy AS t1
 -- JOIN world_life_expectancy AS t2
 --     ON t1.Country = t2.Country;
+
+-- 8. Handling the NULL in 'Life expectancy' column
+SELECT *
+FROM world_life_expectancy
+WHERE `Life expectancy` = ''
+;
+
+SELECT t1.Country, t1.Year, t1.`Life expectancy`, 
+        t2.Country, t2.Year, t2.`Life expectancy`, 
+        t3.Country, t3.Year, t3.`Life expectancy`,
+        ROUND((t2.`Life expectancy` + t3.`Life expectancy`) / 2, 1)
+FROM world_life_expectancy AS t1
+JOIN world_life_expectancy AS t2
+    ON t1.Country = t2.Country
+    AND t1.Year = t2.Year - 1
+JOIN world_life_expectancy AS t3
+    ON t1.Country = t3.Country
+    AND t1.Year = t3.Year + 1
+WHERE t1.`Life expectancy` = ''
+;
+
+UPDATE world_life_expectancy AS t1
+JOIN world_life_expectancy AS t2
+    ON t1.Country = t2.Country
+    AND t1.Year = t2.Year - 1
+JOIN world_life_expectancy AS t3
+    ON t1.Country = t3.Country
+    AND t1.Year = t3.Year + 1
+SET t1.`Life expectancy` = ROUND((t2.`Life expectancy` + t3.`Life expectancy`) / 2, 1)
+WHERE t1.`Life expectancy` = ''
+;
+
+SELECT *
+FROM world_life_expectancy
+;
